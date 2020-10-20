@@ -1,6 +1,5 @@
 #define _GNU_SOURCE
 #define NUM_OF_POPULATION 10
-#define NUM_OF_THREADS (NUM_OF_POPULATION * NUM_OF_POPULATION)
 #define NUM_OF_FITNESS_INDICES 10
 
 #include <stdio.h>
@@ -22,6 +21,21 @@ have compariiison functio return 0 to 1
 
 for each child, choose two parents using the wieghted random fitness
 
+5 10 15 20
+50 total
+
+5/50 = 1/10
+10/50 = 2/10
+15/50 = 3/10
+20/50 = 4/10
+
+9/30
+8/30
+7/30
+6/30
+
+
+
 for each child randomly mutate % of indices to mutate
 
 parents weight over the sum of all the weights
@@ -41,14 +55,11 @@ void *initializePopulation(void *person);
 void printArr(double arr[]);
 double fitnessComparison(double individual[], double goal[]);
 
+double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION]; //big number, used to filter to small population
 int populationIndex = 0;
 
-individual *childPopulation[NUM_OF_THREADS]; //small number, the population that will be doing the reproduction
-int childPopulationIndex = 0;
-
 pthread_mutex_t mutex; //mutex used for writing to shared childPopulation array
-double bestFit[NUM_OF_FITNESS_INDICES];
 
 int main()
 {
@@ -63,11 +74,28 @@ int main()
         pthread_create(&threadNums[i], NULL, initializePopulation, (void *)population[i]);
     }
 
+    double totalSum = 0;
+    double weights[NUM_OF_POPULATION];
+
     //joins all the threads
     for (int i = 0; i < NUM_OF_POPULATION; i++)
     {
         pthread_join(threadNums[i], NULL);
+        totalSum += population[i]->fitnessIndex;
     }
+
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    {
+        weights[i] = ((1 - ((population[i]->fitnessIndex) / totalSum)) / (NUM_OF_POPULATION - 1)); //gives you each weight which added together give 1.0
+    }
+
+    struct timeval time;
+    gettimeofday(&time, NULL);
+
+    int t = time.tv_usec; //random math to maybe make it more chaotic?
+
+    double newParent = ((double)(rand_r(&t) % 100)) / 100;
+    printf("%f\n", newParent);
 }
 
 /*
