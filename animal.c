@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 20
-#define NUM_OF_FITNESS_INDICES 10
-#define NUM_OF_GENS 100
+#define NUM_OF_POPULATION 250
+#define NUM_OF_FITNESS_INDICES 2
+#define NUM_OF_GENS 30
 
 #include <stdio.h>
 #include <pthread.h>
@@ -25,6 +25,7 @@ void *findParents(void *totalSum);
 void parentThreadingFunc();
 void initializePopulationThreading();
 void haveChildren();
+double getError();
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
@@ -36,21 +37,32 @@ int main()
     randomNumArr(bestFit); //generates what we will be regarding the best fit array
     initializePopulationThreading();
 
-    for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
-    {
-        printf("%d %f \n", i, population[0]->fitness[i]);
-    }
-
     for (int i = 0; i < NUM_OF_GENS; i++)
     {
         parentThreadingFunc();
 
         haveChildren();
+        printf("gen #%d %f\n", i, getError(population[0]->fitness));
     }
-    for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
+
+    //dealloc
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+        free(population[i]);
+}
+
+//get total absolute val error on avg just for debugging
+double getError()
+{
+    double error = 0;
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
     {
-        printf("%d %f \n", i, population[0]->fitness[i]);
+        for (int j = 0; j < NUM_OF_FITNESS_INDICES; j++)
+        {
+            error += fabs(population[i]->fitness[j] - bestFit[j]);
+        }
     }
+
+    return error / NUM_OF_POPULATION;
 }
 
 void haveChildren()
