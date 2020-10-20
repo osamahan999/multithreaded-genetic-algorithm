@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 100
+#define NUM_OF_POPULATION 1000
 #define NUM_OF_FITNESS_INDICES 10
-#define NUM_OF_GENS 100
+#define NUM_OF_GENS 25
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 
 #include <stdio.h>
@@ -9,7 +9,6 @@
 #include <math.h>
 #include <sys/time.h>
 #include <stdlib.h>
-#include <semaphore.h>
 
 typedef struct
 {
@@ -36,7 +35,6 @@ individual *population[NUM_OF_POPULATION];
 individual *initialPopulation[NUM_OF_POPULATION]; //duplicates population array to free the pointers
 
 individual *parents[NUM_OF_POPULATION * 2];
-sem_t parentUsed; //used to control writing to parents array
 
 int main()
 {
