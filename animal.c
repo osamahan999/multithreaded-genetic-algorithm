@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 40
+#define NUM_OF_POPULATION 20
 #define NUM_OF_FITNESS_INDICES 10
-#define NUM_OF_GENS 10
+#define NUM_OF_GENS 2
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 
 #include <stdio.h>
@@ -36,7 +36,7 @@ individual *population[NUM_OF_POPULATION];
 
 individual *parents[NUM_OF_POPULATION * 2];
 int parentIndex = 0;
-sem_t parentUsed;
+sem_t parentUsed; //used to control writing to parents array
 
 int main()
 {
@@ -48,6 +48,7 @@ int main()
 
     for (int i = 0; i < NUM_OF_GENS; i++)
     {
+
         parentThreadingFunc();
 
         haveChildren();
@@ -143,7 +144,7 @@ void parentThreadingFunc()
     //threads to find parents
     for (int i = 0; i < NUM_OF_PARENTS; i++)
     {
-        pthread_create(&threadNums[i], NULL, findParents, NULL); //each 2 parents are found multithreaded and then lock parents array to add them
+        pthread_create(&threadNums[i], NULL, findParents, NULL); //each parent found using x threads
     }
 
     //joins all the threads
@@ -164,10 +165,10 @@ void *findParents()
     struct timeval time;
     double num;
 
-    num = 0;
+    num = 0; //sum of weights to find which parent to use
 
     gettimeofday(&time, NULL);
-    int t = time.tv_usec; //random math to maybe make it more chaotic?
+    int t = time.tv_usec;
 
     double newParent = ((double)(rand_r(&t) % 100000)) / 100000; //0 to 999999 because our random doubles go to 0 to 100,000
 
