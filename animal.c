@@ -1,6 +1,6 @@
 #define _GNU_SOURCE
-#define NUM_OF_THREADS 100
 #define NUM_OF_POPULATION 10
+#define NUM_OF_THREADS (NUM_OF_POPULATION * NUM_OF_POPULATION)
 #define NUM_OF_FITNESS_INDICES 10
 
 #include <stdio.h>
@@ -18,6 +18,14 @@ There will be an array of best fit
 array of arrays of best 
 
 
+have compariiison functio return 0 to 1
+
+for each child, choose two parents using the wieghted random fitness
+
+for each child randomly mutate % of indices to mutate
+
+parents weight over the sum of all the weights
+
 
 */
 typedef struct
@@ -28,7 +36,7 @@ typedef struct
 } individual;
 
 void randomNumArr(double *arr);
-void *threadFunc(individual *person);
+void *initializePopulation(void *person);
 void printArr(double arr[]);
 
 individual *population[NUM_OF_POPULATION]; //big number, used to filter to small population
@@ -43,30 +51,34 @@ double bestFit[NUM_OF_FITNESS_INDICES];
 int main()
 {
     randomNumArr(bestFit); //generates what we will be regarding the best fit array
-    printArr(bestFit);
 
-    pthread_t threadNum[NUM_OF_THREADS];
+    pthread_t threadNums[NUM_OF_POPULATION];
 
-    // //creates all the threads
-    // for (int i = 0; i < NUM_OF_THREADS; i++)
-    // {
-    //     pthread_create(&threadNum[i], NULL, threadFunc, NULL);
-    // }
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    {
+        population[i] = (individual *)malloc(sizeof(individual)); //allocate mem for each population
 
-    // //joins all the threads
-    // for (int i = 0; i < NUM_OF_THREADS; i++)
-    // {
-    //     pthread_join(threadNum[i], NULL);
-    // }
+        pthread_create(&threadNums[i], NULL, initializePopulation, (void *)population[i]);
+    }
+
+    //joins all the threads
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    {
+        pthread_join(threadNums[i], NULL);
+    }
 }
 
 /*
 Calls all functions for each thread
 */
-void *threadFunc(individual *person)
+void *initializePopulation(void *person)
 {
-    randomNumArr(person->fitness); //initializes each threads initial arr.
-    person->individualNumber = pthread_self();
+
+    // //initialize the indiivdual
+    individual *temp = (individual *)person; //MAKE SURE TO FREE THIS
+    randomNumArr(temp->fitness);
+
+    pthread_exit(0);
 }
 
 //initializes the array with pseudo random doubles
