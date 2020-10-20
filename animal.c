@@ -29,6 +29,7 @@ typedef struct
 
 void randomNumArr(double *arr);
 void *threadFunc(individual *person);
+void printArr(double arr[]);
 
 individual *population[NUM_OF_POPULATION]; //big number, used to filter to small population
 int populationIndex = 0;
@@ -41,6 +42,9 @@ double bestFit[NUM_OF_FITNESS_INDICES];
 
 int main()
 {
+    randomNumArr(bestFit); //generates what we will be regarding the best fit array
+    printArr(bestFit);
+
     pthread_t threadNum[NUM_OF_THREADS];
 
     // //creates all the threads
@@ -54,11 +58,6 @@ int main()
     // {
     //     pthread_join(threadNum[i], NULL);
     // }
-
-    randomNumArr(bestFit);
-
-    for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
-        printf("%f\n", bestFit[i]);
 }
 
 /*
@@ -66,6 +65,8 @@ Calls all functions for each thread
 */
 void *threadFunc(individual *person)
 {
+    randomNumArr(person->fitness); //initializes each threads initial arr.
+    person->individualNumber = pthread_self();
 }
 
 //initializes the array with pseudo random doubles
@@ -80,6 +81,13 @@ void randomNumArr(double *arr)
 
     for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
     {
-        arr[i] = (rand_r(&t) % 100) * 0.339 * 2.979649; //random double, more like random ints mapped to doubles
+        arr[i] = (rand_r(&t) % 100000) * 0.339 * 2.94988200619; //random double, more like random ints mapped to doubles. Max num is 100,000 exactly
     }
+}
+
+void printArr(double arr[])
+{
+
+    for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
+        printf("%f\n", arr[i]);
 }
