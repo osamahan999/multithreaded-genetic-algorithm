@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 2
+#define NUM_OF_POPULATION 20
 #define NUM_OF_FITNESS_INDICES 10
+#define NUM_OF_GENS 10
 
 #include <stdio.h>
 #include <pthread.h>
@@ -23,9 +24,12 @@ double fitnessComparison(double individual[], double goal[]);
 void *findParents(void *totalSum);
 void parentThreadingFunc();
 void initializePopulationThreading();
+void haveChildren();
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
+individual *populationTwo[NUM_OF_POPULATION];
+
 individual *parents[NUM_OF_POPULATION * 2];
 
 pthread_mutex_t mutex; //mutex used for writing to shared childPopulation array
@@ -35,7 +39,52 @@ int main()
     randomNumArr(bestFit); //generates what we will be regarding the best fit array
     initializePopulationThreading();
 
-    parentThreadingFunc();
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    {
+        printf("%d %f \n", i, population[i]->fitnessIndex);
+    }
+
+    for (int i = 0; i < NUM_OF_GENS; i++)
+    {
+        parentThreadingFunc();
+
+        haveChildren();
+    }
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    {
+        printf("%d %f \n", i, population[i]->fitnessIndex);
+    }
+}
+
+void haveChildren()
+{
+
+    int popIndex = 0; //used to update population
+
+    double tempA[NUM_OF_FITNESS_INDICES];
+    double tempB[NUM_OF_FITNESS_INDICES];
+
+    for (int i = 0; i < NUM_OF_POPULATION * 2; i += 2)
+    {
+
+        //copy data into temp var
+        for (int copyIndex = 0; copyIndex < NUM_OF_FITNESS_INDICES; copyIndex++)
+        {
+            tempA[copyIndex] = parents[i]->fitness[copyIndex];
+            tempB[copyIndex] = parents[i + 1]->fitness[copyIndex];
+        }
+
+        //for each indice, gets the average of the two parent's index and sets it to the index in population
+        for (int j = 0; j < NUM_OF_FITNESS_INDICES; j++)
+        {
+            double val = (tempA[j] + tempB[j]) / 2;
+            population[popIndex]->fitness[j] = val;
+        }
+
+        population[popIndex]->fitnessIndex = fitnessComparison(population[popIndex]->fitness, bestFit);
+
+        popIndex++;
+    }
 }
 
 //calls the threading function for the initial population
@@ -97,6 +146,13 @@ void *findParents(void *totalSum)
         weights[i] = ((1 - ((population[i]->fitnessIndex) / sum)) / (NUM_OF_POPULATION - 1)); //gives you each weight which added together give 1.0
     }
 
+    //500 30 402 70
+    //sum is 1002
+    //500/1002 = .499002 -> .16699933
+    //30/1002 = .02994012 ->.32335329
+    // .4011976 -> 0.1996008
+    // 70/1002 = .06986028 -> 0.31004657333
+
     for (int i = 0; i < NUM_OF_POPULATION * 2; i++)
     {
 
@@ -114,7 +170,7 @@ void *findParents(void *totalSum)
             if (newParent < num)
             {
                 parents[i] = population[j];
-                j = NUM_OF_POPULATION;
+                break;
             }
         }
     }
