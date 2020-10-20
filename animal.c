@@ -21,10 +21,11 @@ void *initializePopulation(void *person);
 void printArr(double arr[]);
 double fitnessComparison(double individual[], double goal[]);
 void *findParents(void *totalSum);
+void parentThreadingFunc();
+void initializePopulationThreading();
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
-
 individual *parents[NUM_OF_POPULATION * 2];
 
 pthread_mutex_t mutex; //mutex used for writing to shared childPopulation array
@@ -32,7 +33,14 @@ pthread_mutex_t mutex; //mutex used for writing to shared childPopulation array
 int main()
 {
     randomNumArr(bestFit); //generates what we will be regarding the best fit array
+    initializePopulationThreading();
 
+    parentThreadingFunc();
+}
+
+//calls the threading function for the initial population
+void initializePopulationThreading()
+{
     pthread_t threadNums[NUM_OF_POPULATION];
 
     for (int i = 0; i < NUM_OF_POPULATION; i++)
@@ -42,13 +50,21 @@ int main()
         pthread_create(&threadNums[i], NULL, initializePopulation, (void *)population[i]);
     }
 
-    double totalSum = 0;
     //joins all the threads
     for (int i = 0; i < NUM_OF_POPULATION; i++)
     {
         pthread_join(threadNums[i], NULL);
-        totalSum += population[i]->fitnessIndex;
     }
+}
+
+//creates the threads to find the new parents based on current population
+void parentThreadingFunc()
+{
+    pthread_t threadNums[NUM_OF_POPULATION];
+
+    double totalSum = 0;
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+        totalSum += population[i]->fitnessIndex;
 
     //threads to find parents
     for (int i = 0; i < NUM_OF_POPULATION; i++)
@@ -61,11 +77,13 @@ int main()
     {
         pthread_join(threadNums[i], NULL);
     }
-
-    for (int i = 0; i < NUM_OF_POPULATION * 2; i++)
-        printf("%f\n", parents[i]->fitnessIndex);
 }
 
+/*
+Finds the new parents for the next children and puts them in the parents array
+Uses weighted randomness, where each individual is given a weight due to their relative fitness, and then uses a random number to choose
+one of the weighted parents and puts it in the array
+*/
 void *findParents(void *totalSum)
 {
 
@@ -100,6 +118,8 @@ void *findParents(void *totalSum)
             }
         }
     }
+
+    pthread_exit(0); //close thread ; job done
 }
 
 /*
