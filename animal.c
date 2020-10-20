@@ -32,12 +32,14 @@ typedef struct
 {
     double fitness[NUM_OF_FITNESS_INDICES];
     pthread_t individualNumber;
+    double fitnessIndex;
 
 } individual;
 
 void randomNumArr(double *arr);
 void *initializePopulation(void *person);
 void printArr(double arr[]);
+double fitnessComparison(double individual[], double goal[]);
 
 individual *population[NUM_OF_POPULATION]; //big number, used to filter to small population
 int populationIndex = 0;
@@ -77,8 +79,22 @@ void *initializePopulation(void *person)
     // //initialize the indiivdual
     individual *temp = (individual *)person; //MAKE SURE TO FREE THIS
     randomNumArr(temp->fitness);
+    temp->fitnessIndex = fitnessComparison(temp->fitness, bestFit);
 
     pthread_exit(0);
+}
+
+// a return value of 0 means you hit the goal! higher than 0 means farther
+double fitnessComparison(double individual[], double goal[])
+{
+    double fitnessFactor = 0;
+
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    {
+        fitnessFactor += fabs(individual[i] - goal[i]);
+    }
+
+    return fitnessFactor;
 }
 
 //initializes the array with pseudo random doubles
