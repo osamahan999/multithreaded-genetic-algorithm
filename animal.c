@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #define NUM_OF_POPULATION 20
 #define NUM_OF_FITNESS_INDICES 10
-#define NUM_OF_GENS 10
+#define NUM_OF_GENS 100
 
 #include <stdio.h>
 #include <pthread.h>
@@ -28,20 +28,17 @@ void haveChildren();
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
-individual *populationTwo[NUM_OF_POPULATION];
 
 individual *parents[NUM_OF_POPULATION * 2];
-
-pthread_mutex_t mutex; //mutex used for writing to shared childPopulation array
 
 int main()
 {
     randomNumArr(bestFit); //generates what we will be regarding the best fit array
     initializePopulationThreading();
 
-    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
     {
-        printf("%d %f \n", i, population[i]->fitnessIndex);
+        printf("%d %f \n", i, population[0]->fitness[i]);
     }
 
     for (int i = 0; i < NUM_OF_GENS; i++)
@@ -50,9 +47,9 @@ int main()
 
         haveChildren();
     }
-    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
     {
-        printf("%d %f \n", i, population[i]->fitnessIndex);
+        printf("%d %f \n", i, population[0]->fitness[i]);
     }
 }
 
@@ -143,7 +140,8 @@ void *findParents(void *totalSum)
     for (int i = 0; i < NUM_OF_POPULATION; i++)
     {
 
-        weights[i] = ((1 - ((population[i]->fitnessIndex) / sum)) / (NUM_OF_POPULATION - 1)); //gives you each weight which added together give 1.0
+        // weights[i] = ((((population[i]->fitnessIndex) / sum)) / (NUM_OF_POPULATION - 1)); //gives you each weight which added together give 1.0
+        weights[i] = population[i]->fitnessIndex / sum;
     }
 
     //500 30 402 70
@@ -161,7 +159,7 @@ void *findParents(void *totalSum)
 
         int t = time.tv_usec; //random math to maybe make it more chaotic?
 
-        double newParent = ((double)(rand_r(&t) % 100)) / 100;
+        double newParent = ((double)(rand_r(&t) % 101)) / 100;
 
         double num = 0;
         for (int j = 0; j < NUM_OF_POPULATION; j++)
@@ -199,10 +197,10 @@ double fitnessComparison(double individual[], double goal[])
 
     for (int i = 0; i < NUM_OF_POPULATION; i++)
     {
-        fitnessFactor += fabs(individual[i] - goal[i]);
+        fitnessFactor += (fabs(individual[i] - goal[i]));
     }
 
-    return fitnessFactor;
+    return (1 / fitnessFactor);
 }
 
 //initializes the array with pseudo random doubles
