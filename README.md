@@ -1,4 +1,4 @@
-Compile using gcc -o animal animal.c -pthread
+Compile using gcc -o animal animal.c -pthread -lpthread -lrt
 
 Run using ./animal
 
