@@ -9,7 +9,6 @@
 #include <math.h>
 #include <sys/time.h>
 #include <stdlib.h>
-#include <semaphore.h>
 
 typedef struct
 {
@@ -36,7 +35,6 @@ individual *population[NUM_OF_POPULATION];
 individual *initialPopulation[NUM_OF_POPULATION]; //duplicates population array to free the pointers
 
 individual *parents[NUM_OF_POPULATION * 2];
-sem_t parentUsed; //used to control writing to parents array
 
 int main()
 {
