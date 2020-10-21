@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 1000
-#define NUM_OF_FITNESS_INDICES 10
-#define NUM_OF_GENS 25
+#define NUM_OF_POPULATION 50
+#define NUM_OF_FITNESS_INDICES 20
+#define NUM_OF_GENS 20
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 
 #include <stdio.h>
@@ -29,6 +29,7 @@ void initializePopulationThreading();
 void haveChildren();
 double getError();
 void calculatePopulationWeights();
+void *mutationGenerator(void *individual);
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
@@ -49,8 +50,8 @@ int main()
         parentThreadingFunc();
 
         haveChildren();
+        printf("gen #%d %f\n", i, getError());
     }
-    printf("gen #%d %f\n", NUM_OF_GENS, getError());
 
     //dealloc
     for (int i = 0; i < NUM_OF_POPULATION; i++)
@@ -124,6 +125,7 @@ void initializePopulationThreading()
     }
 }
 
+//calculates a weight for each population, which is used to do weighted random reproduction
 void calculatePopulationWeights()
 {
     double totalSum = 0;
@@ -134,6 +136,37 @@ void calculatePopulationWeights()
     for (int i = 0; i < NUM_OF_POPULATION; i++)
         population[i]->weight = population[i]->fitnessIndex / totalSum;
 }
+
+//generates mutations for each array index for each parent called using threading
+void *mutationGenerator(void *currentPerson) //A little weird naming haha
+{
+    individual *person = (individual *)currentPerson;
+    struct timeval time;
+    int t;
+    int mutationChance;
+
+    for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
+    {
+        gettimeofday(&time, NULL);
+        t = time.tv_usec;
+        mutationChance = rand_r(&t) % 100;
+
+        if (mutationChance > 94) //5% chance of mutation, since range 0-99
+        {
+            gettimeofday(&time, NULL);
+            t = time.tv_usec;
+            double mutationAmt = (double)(rand_r(&t) % 21) / 100; // range is 0 -> 0.2
+
+            if (mutationChance == 99)
+                person->fitness[i] *= (0.8 + (mutationAmt * 2));
+            else
+                person->fitness[i] *= (0.9 + mutationAmt); //max mutation 1.1, min mutation .9
+        }
+    }
+
+    pthread_exit(0);
+}
+
 //creates the threads to find the new parents based on current population
 void parentThreadingFunc()
 {
@@ -148,6 +181,19 @@ void parentThreadingFunc()
 
         *j = parent;                                                       //sets value of malloc'd int to the parent index
         pthread_create(&threadNums[parent], NULL, findParents, (void *)j); //each parent found using x threads
+    }
+
+    //joins all the threads
+    for (int i = 0; i < NUM_OF_PARENTS; i++)
+    {
+        pthread_join(threadNums[i], NULL);
+    }
+
+    //mutate the parents with threading
+    for (int parent = 0; parent < NUM_OF_PARENTS; parent++)
+    {
+
+        pthread_create(&threadNums[parent], NULL, mutationGenerator, (void *)parents[parent]); //each parent found using x threads
     }
 
     //joins all the threads
