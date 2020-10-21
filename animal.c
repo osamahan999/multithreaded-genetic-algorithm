@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 50
-#define NUM_OF_FITNESS_INDICES 20
-#define NUM_OF_GENS 20
+#define NUM_OF_POPULATION 300
+#define NUM_OF_FITNESS_INDICES 1
+#define NUM_OF_GENS 50
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 
 #include <stdio.h>
@@ -42,7 +42,7 @@ int main()
     randomNumArr(bestFit); //generates what we will be regarding the best fit array
 
     initializePopulationThreading();
-    printf("gen #%d %f\n", 0, getError());
+    // printf("gen #%d %f\n", 0, getError());
 
     for (int i = 0; i < NUM_OF_GENS; i++)
     {
@@ -77,6 +77,9 @@ void haveChildren()
 {
 
     int popIndex = 0; //used to update population
+    struct timeval time;
+    int t;
+    int crossOverPoint;
 
     double tempA[NUM_OF_FITNESS_INDICES];
     double tempB[NUM_OF_FITNESS_INDICES];
@@ -94,8 +97,17 @@ void haveChildren()
         //for each indice, gets the average of the two parent's index and sets it to the index in population
         for (int j = 0; j < NUM_OF_FITNESS_INDICES; j++)
         {
-            double val = (tempA[j] + tempB[j]) / 2;
-            population[popIndex]->fitness[j] = val;
+            gettimeofday(&time, NULL);
+            t = time.tv_usec; //random math to maybe make it more chaotic?
+            crossOverPoint = (rand_r(&t) % 100);
+
+            if (crossOverPoint < 50)
+                population[popIndex]->fitness[j] = tempA[j];
+            else
+                population[popIndex]->fitness[j] = tempB[j];
+            // double val = (tempA[j] + tempB[j]) / 2;
+            // population[popIndex]
+            //     ->fitness[j] = val;
         }
 
         population[popIndex]->fitnessIndex = fitnessComparison(population[popIndex]->fitness, bestFit); //update fitness
