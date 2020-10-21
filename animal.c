@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 300
+#define NUM_OF_POPULATION 10
 #define NUM_OF_FITNESS_INDICES 1
-#define NUM_OF_GENS 50
+#define NUM_OF_GENS 1000000
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 
 #include <stdio.h>
@@ -50,7 +50,14 @@ int main()
         parentThreadingFunc();
 
         haveChildren();
-        printf("gen #%d %f\n", i, getError());
+
+        double err = getError();
+        if (err < 50)
+        {
+            printf("gen #%d had err %f and is converged!\n", i, err);
+            break;
+        }
+        printf("gen #%d %f\n", i, err);
     }
 
     //dealloc
