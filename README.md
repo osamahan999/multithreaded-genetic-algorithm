@@ -19,3 +19,9 @@ I use one thread for each population to initialize them, and calculate their fit
 4. I then use multithreading with the weights to find all the new parents, and put them in the parent array.
 
 5. This is done NUM_OF_GENS many times, each time using a simple mathmatical model to try to get closed to the best fit. 
+
+
+A quick notesheet runtime analysis produces
+o(r) + o(nr^2) + 2 * o(n) + o(t * (6n + 2n^2 + 3nr 2nr^3))
+
+where r is the amount of indices in our fitness array, n is the amount of indiviudals in the population, and t is the amount of generations we run.
