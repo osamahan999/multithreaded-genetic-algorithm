@@ -1,8 +1,9 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 10
-#define NUM_OF_FITNESS_INDICES 1
-#define NUM_OF_GENS 1000000
+#define NUM_OF_POPULATION 50
+#define NUM_OF_FITNESS_INDICES 10
+#define NUM_OF_GENS 5000
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
+#define AMT_OF_ERROR_PER_INDICE 100 //with our # range going from 0 to 100,000, a 100 error per indice means 1/1000 error
 
 #include <stdio.h>
 #include <pthread.h>
@@ -27,7 +28,7 @@ void *findParents(void *i);
 void parentThreadingFunc();
 void initializePopulationThreading();
 void haveChildren();
-double getError();
+double getError(int popNum);
 void calculatePopulationWeights();
 void *mutationGenerator(void *individual);
 
@@ -35,13 +36,19 @@ double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
 individual *initialPopulation[NUM_OF_POPULATION]; //duplicates population array to free the pointers
 
-individual *parents[NUM_OF_POPULATION * 2];
+individual *parents[NUM_OF_POPULATION * 500];
 
 int main()
 {
+    struct timeval start, end;
+    gettimeofday(&start, NULL); //start timer
+
+
     randomNumArr(bestFit); //generates what we will be regarding the best fit array
 
     initializePopulationThreading();
+    printf("pregen individual#1 err= %f\n", getError(0));
+
     // printf("gen #%d %f\n", 0, getError());
 
     for (int i = 0; i < NUM_OF_GENS; i++)
@@ -51,33 +58,63 @@ int main()
 
         haveChildren();
 
-        double err = getError();
-        if (err < 50)
-        {
-            printf("gen #%d had err %f and is converged!\n", i, err);
-            break;
+        //find lowest error in population and break 
+        double lowestErr = INFINITY;
+        int popWithLowestErr;
+        int genCounter = i;
+
+
+        //can multithread finding each of the population's error. can add it to struct as 'currentError' and simply multithread it. maybe faster?
+        for (int j = 0; j < NUM_OF_POPULATION; j++) {
+            
+            double err = getError(j);
+            if (err < lowestErr) {
+                lowestErr = err;
+                popWithLowestErr = j;
+            }
+
+            if (err < (AMT_OF_ERROR_PER_INDICE * NUM_OF_FITNESS_INDICES)) {
+                printf("gen #%d had err %f and is converged!\n", i, err);
+                i = NUM_OF_GENS;
+                break;
+            }
         }
-        printf("gen #%d %f\n", i, err);
+        
+        printf("gen #%d pop %d lowest err: %f\n", genCounter, popWithLowestErr,lowestErr);
+
+
+        // double err = getError(0);
+            
+        // if (err < (AMT_OF_ERROR_PER_INDICE * NUM_OF_FITNESS_INDICES)) {
+        //     printf("gen #%d had err %f and is converged!\n", i, err);
+        //     break;
+        // }
     }
+
+    gettimeofday(&end, NULL); //end timer
+
+
+    printf("Time passed %f seconds \n", (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) * 1.0/1000000));
 
     //dealloc
     for (int i = 0; i < NUM_OF_POPULATION; i++)
         free(initialPopulation[i]);
+
+    
 }
 
 //get total absolute val error on avg just for debugging
-double getError()
+double getError(int popNum)
 {
     double error = 0;
-    for (int i = 0; i < NUM_OF_POPULATION; i++)
+  
+    for (int j = 0; j < NUM_OF_FITNESS_INDICES; j++)
     {
-        for (int j = 0; j < NUM_OF_FITNESS_INDICES; j++)
-        {
-            error += fabs(population[i]->fitness[j] - bestFit[j]);
-        }
+            error += fabs(population[popNum]->fitness[j] - bestFit[j]);
     }
+    
 
-    return error / NUM_OF_POPULATION;
+    return error;
 }
 
 void haveChildren()
@@ -168,18 +205,22 @@ void *mutationGenerator(void *currentPerson) //A little weird naming haha
     {
         gettimeofday(&time, NULL);
         t = time.tv_usec;
-        mutationChance = rand_r(&t) % 100;
 
-        if (mutationChance > 94) //5% chance of mutation, since range 0-99
+
+        mutationChance = rand_r(&t) % 100;
+        if (mutationChance > (85)) //10% to mutate
         {
+
+
+            //50% chance to double, or 50% to half
             gettimeofday(&time, NULL);
             t = time.tv_usec;
-            double mutationAmt = (double)(rand_r(&t) % 21) / 100; // range is 0 -> 0.2
+            int binaryMutator = (rand_r(&t) % 2);
 
-            if (mutationChance == 99)
-                person->fitness[i] *= (0.8 + (mutationAmt * 2));
+            if (binaryMutator == 0)
+                person->fitness[i] *= 1.1; //half it
             else
-                person->fitness[i] *= (0.9 + mutationAmt); //max mutation 1.1, min mutation .9
+                person->fitness[i] *= .9; //double it
         }
     }
 
@@ -234,6 +275,9 @@ void *findParents(void *pointerToParentIndex)
     double num;
     int parentIndex = *(int *)pointerToParentIndex;
     free(pointerToParentIndex);
+
+ 
+
 
     num = 0; //sum of weights to find which parent to use
 
