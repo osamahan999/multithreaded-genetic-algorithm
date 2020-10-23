@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 100
+#define NUM_OF_POPULATION 30
 #define NUM_OF_FITNESS_INDICES 1
-#define NUM_OF_GENS 20
+#define NUM_OF_GENS 100
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 #define AMT_OF_ERROR_PER_INDICE 100            //with our # range going from 0 to 100,000, a 100 error per indice means 1/1000 error
 #define TOP_X 10
@@ -37,20 +37,20 @@ void bestMutationChance(int runsToGetAvg);
 void populationWeightTopIndividuals();
 void pushArrayDownOneIndex(individual *topIndividual, int pushDownAmt);
 
-int MUTATION_CHANCE = 20; // mutation_chance% of mutation, if 20, then 80
+int MUTATION_CHANCE = 0; // mutation_chance% of mutation, if 20, then 80
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
 individual *initialPopulation[NUM_OF_POPULATION]; //duplicates population array to free the pointers
 
-individual *parents[NUM_OF_POPULATION * 500];
+individual *parents[NUM_OF_POPULATION * 2];
 
 int main()
 {
 
-    bestMutationChance(10); //gets the best mutation chance with current crossover function
+    bestMutationChance(50); //gets the best mutation chance with current crossover function
 
-     //dealloc
+    //dealloc
     for (int i = 0; i < NUM_OF_POPULATION; i++)
         free(initialPopulation[i]);
 }
@@ -62,10 +62,16 @@ void bestMutationChance(int runsToGetAvg)
 {
     int bestMutationChance, initialMutationChance = MUTATION_CHANCE;
 
+    FILE *fp;
+    fp = fopen("new.txt", "w");
+
+    if (fp == NULL)
+        exit(1);
+    fputs("# of indices,\t # of gens,\t # of pop,\t sample size,\t mutation chance,\t avgTime,\t netTime\n", fp);
     double bestRuntime = INFINITY;
-    for (int i = 0; i < initialMutationChance; i++)
+    for (int i = 0; i < 100 - initialMutationChance; i++)
     {
-        printf("run #%d with mutation chance %d\n", i, MUTATION_CHANCE);
+        // printf("run #%d with mutation chance %d\n", i, MUTATION_CHANCE);
         double totalTime = 0;
 
         for (int j = 0; j < runsToGetAvg; j++)
@@ -76,16 +82,19 @@ void bestMutationChance(int runsToGetAvg)
         double avgTime = totalTime / runsToGetAvg;
         printf("run #%d with avg time %f with a net time of %f\n", i, avgTime, totalTime);
 
+        fprintf(fp, "%d,\t %d,\t %d,\t %d,\t %d, %f,\t %f\n", NUM_OF_FITNESS_INDICES, NUM_OF_GENS, NUM_OF_POPULATION, runsToGetAvg, MUTATION_CHANCE, avgTime, totalTime);
+
         if (avgTime < bestRuntime)
         {
             bestRuntime = avgTime;
             bestMutationChance = MUTATION_CHANCE;
         }
 
-        MUTATION_CHANCE--;
+        MUTATION_CHANCE++;
     }
 
     printf("for #%d indices, best mutation chance is %d with avg runtime of %f\n", NUM_OF_FITNESS_INDICES, bestMutationChance, bestRuntime);
+    fclose(fp);
 }
 
 //initializes the algorithm and calls it for each generation
@@ -132,7 +141,7 @@ double algorithmInitialization()
             }
         }
 
-        printf("gen #%d pop %d lowest err: %f\n", genCounter, popWithLowestErr, lowestErr);
+        // printf("gen #%d pop %d lowest err: %f\n", genCounter, popWithLowestErr, lowestErr);
     }
 
     gettimeofday(&end, NULL); //end timer
