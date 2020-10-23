@@ -1,9 +1,10 @@
 #define _GNU_SOURCE
 #define NUM_OF_POPULATION 100
-#define NUM_OF_FITNESS_INDICES 2
-#define NUM_OF_GENS 1000
+#define NUM_OF_FITNESS_INDICES 1
+#define NUM_OF_GENS 20
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 #define AMT_OF_ERROR_PER_INDICE 100            //with our # range going from 0 to 100,000, a 100 error per indice means 1/1000 error
+#define TOP_X 10
 
 #include <stdio.h>
 #include <pthread.h>
@@ -33,8 +34,10 @@ void calculatePopulationWeights();
 void *mutationGenerator(void *individual);
 double algorithmInitialization();
 void bestMutationChance(int runsToGetAvg);
+void populationWeightTopIndividuals();
+void pushArrayDownOneIndex(individual *topIndividual, int pushDownAmt);
 
-int MUTATION_CHANCE = 50; // mutation_chance% of mutation, if 20, then 80
+int MUTATION_CHANCE = 20; // mutation_chance% of mutation, if 20, then 80
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
@@ -47,7 +50,7 @@ int main()
 
     bestMutationChance(10); //gets the best mutation chance with current crossover function
 
-    //dealloc
+     //dealloc
     for (int i = 0; i < NUM_OF_POPULATION; i++)
         free(initialPopulation[i]);
 }
@@ -218,6 +221,7 @@ void initializePopulationThreading()
 }
 
 //calculates a weight for each population, which is used to do weighted random reproduction
+//for equal distribution among all individuals based on fitness
 void calculatePopulationWeights()
 {
     double totalSum = 0;
@@ -380,4 +384,176 @@ void printArr(double arr[])
 
     for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
         printf("%f\n", arr[i]);
+}
+
+/**ALL CODE BENEATH HERE DOES NOT WORK AND IS COMPLETE GARBAGE
+ * 
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * //////////////////////////////////////////////////////////
+ * 
+*/
+void findParentsTopIndividuals(individual *topIndividuals[])
+{
+    double totalSum = 0;
+
+    for (int i = 0; i < TOP_X; i++)
+        totalSum += topIndividuals[i]->fitnessIndex;
+
+    for (int i = 0; i < TOP_X; i++)
+        topIndividuals[i]->weight = topIndividuals[i]->fitnessIndex / totalSum;
+}
+
+void populationWeightTopIndividuals()
+{
+    //top x individuals
+    individual *topIndividuals[TOP_X]; //temporary array to hold all the top 10 individuals
+
+    //initialize arr to NULL values
+    for (int i = 0; i < TOP_X; i++)
+    {
+        topIndividuals[i] = NULL;
+    }
+
+    //for each individual, we get the fitnessIndex. We then go through each individual in our topIndividuals array
+    //and check to see if our current individual has a larger fitnessIndex than any one in the array. If so,
+    //we push down the array till that index, and put the new person in there.
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    {
+        double fitnessIndex = population[i]->fitnessIndex;
+        for (int j = 0; j < TOP_X; j++)
+        {
+            if (topIndividuals[j] == NULL)
+            {
+                topIndividuals[j] = population[i];
+            }
+            else if (topIndividuals[j]->fitnessIndex > fitnessIndex)
+            {
+                for (int i = TOP_X - 1; i >= (TOP_X - j); j--)
+                {
+                    topIndividuals[i] = topIndividuals[i - 1];
+                }
+                topIndividuals[j] = population[i];
+                break;
+            }
+        }
+    }
+
+    double totalSum = 0;
+
+    for (int i = 0; i < TOP_X; i++)
+        totalSum += topIndividuals[i]->fitnessIndex;
+
+    for (int i = 0; i < TOP_X; i++)
+        topIndividuals[i]->weight = topIndividuals[i]->fitnessIndex / totalSum;
+
+    struct timeval time;
+    double num;
+    int t;
+
+    for (int i = 0; i < NUM_OF_PARENTS; i++)
+    {
+
+        num = 0; //sum of weights to find which parent to use
+
+        gettimeofday(&time, NULL);
+        t = time.tv_usec;
+
+        double newParent = ((double)(rand_r(&t) % 100000)) / 100000; //0 to 999999 because our random doubles go to 0 to 100,000
+
+        for (int j = 0; j < TOP_X; j++)
+        {
+            num += topIndividuals[j]->weight;
+
+            if (newParent < num)
+            {
+                parents[i] = topIndividuals[j];
+
+                break;
+            }
+        }
+    }
+
+    for (int parent = 0; parent < NUM_OF_POPULATION; parent++)
+    {
+        int mutationChance;
+
+        for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
+        {
+            gettimeofday(&time, NULL);
+            t = time.tv_usec;
+
+            mutationChance = rand_r(&t) % 100;
+            if (mutationChance >= (100 - MUTATION_CHANCE)) //20% chance = 100 - 20
+            {
+
+                //50% chance to double, or 50% to half
+                gettimeofday(&time, NULL);
+                t = time.tv_usec;
+                int binaryMutator = (rand_r(&t) % 2);
+
+                if (binaryMutator == 0)
+                    parents[parent]->fitness[i] *= 1.1; //increase it
+                else
+                    parents[parent]->fitness[i] *= .9; //decrease it
+            }
+        }
+    }
+
+    int popIndex = 0; //used to update population
+
+    int crossOverPoint;
+
+    double tempA[NUM_OF_FITNESS_INDICES];
+    double tempB[NUM_OF_FITNESS_INDICES];
+
+    for (int i = 0; i < NUM_OF_PARENTS; i += 2)
+    {
+
+        //copy data into temp var
+        for (int copyIndex = 0; copyIndex < NUM_OF_FITNESS_INDICES; copyIndex++)
+        {
+            tempA[copyIndex] = parents[i]->fitness[copyIndex];
+            tempB[copyIndex] = parents[i + 1]->fitness[copyIndex];
+        }
+
+        //for each indice, gets the average of the two parent's index and sets it to the index in population
+        for (int j = 0; j < NUM_OF_FITNESS_INDICES; j++)
+        {
+            gettimeofday(&time, NULL);
+            t = time.tv_usec; //random math to maybe make it more chaotic?
+            crossOverPoint = (rand_r(&t) % 100);
+
+            if (crossOverPoint < 50)
+                population[popIndex]->fitness[j] = tempA[j];
+            else
+                population[popIndex]->fitness[j] = tempB[j];
+        }
+
+        population[popIndex]->fitnessIndex = fitnessComparison(population[popIndex]->fitness, bestFit); //update fitness
+
+        popIndex++;
+    }
+}
+
+//pushes array down one index
+void pushArrayDownOneIndex(individual *topIndividuals, int pushDownAmt)
+{
+
+    for (int i = TOP_X - 1; i >= (TOP_X - pushDownAmt); i--)
+    {
+        topIndividuals[i] = topIndividuals[i - 1];
+    }
 }
