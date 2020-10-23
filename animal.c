@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 250
+#define NUM_OF_POPULATION 100
 #define NUM_OF_FITNESS_INDICES 2
-#define NUM_OF_GENS 100
+#define NUM_OF_GENS 1000
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 #define AMT_OF_ERROR_PER_INDICE 100            //with our # range going from 0 to 100,000, a 100 error per indice means 1/1000 error
 
@@ -32,8 +32,9 @@ double getError(int popNum);
 void calculatePopulationWeights();
 void *mutationGenerator(void *individual);
 double algorithmInitialization();
+void bestMutationChance(int runsToGetAvg);
 
-int MUTATION_CHANCE = 10; // mutation_chance% of mutation, if 20, then 80
+int MUTATION_CHANCE = 50; // mutation_chance% of mutation, if 20, then 80
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
@@ -44,12 +45,22 @@ individual *parents[NUM_OF_POPULATION * 500];
 int main()
 {
 
-    int runsToGetAvg = 100;
+    bestMutationChance(10); //gets the best mutation chance with current crossover function
 
-    int bestMutationChance = MUTATION_CHANCE;
+    //dealloc
+    for (int i = 0; i < NUM_OF_POPULATION; i++)
+        free(initialPopulation[i]);
+}
+
+/**
+ * Runs through a bunch of mutation chances to find best mutation chance with the current crossover function 
+*/
+void bestMutationChance(int runsToGetAvg)
+{
+    int bestMutationChance, initialMutationChance = MUTATION_CHANCE;
+
     double bestRuntime = INFINITY;
-
-    for (int i = 0; i < 100 - 10; i++)
+    for (int i = 0; i < initialMutationChance; i++)
     {
         printf("run #%d with mutation chance %d\n", i, MUTATION_CHANCE);
         double totalTime = 0;
@@ -68,16 +79,13 @@ int main()
             bestMutationChance = MUTATION_CHANCE;
         }
 
-        MUTATION_CHANCE += 1;
+        MUTATION_CHANCE--;
     }
 
     printf("for #%d indices, best mutation chance is %d with avg runtime of %f\n", NUM_OF_FITNESS_INDICES, bestMutationChance, bestRuntime);
-
-    //dealloc
-    for (int i = 0; i < NUM_OF_POPULATION; i++)
-        free(initialPopulation[i]);
 }
 
+//initializes the algorithm and calls it for each generation
 double algorithmInitialization()
 {
     struct timeval start, end;
@@ -144,6 +152,10 @@ double getError(int popNum)
     return error;
 }
 
+/**
+ * crosses the arrays of each 2 parents into a new child, 
+ * with each index having a 50% chance of being from parent A or from parent B
+*/
 void haveChildren()
 {
 
@@ -176,9 +188,6 @@ void haveChildren()
                 population[popIndex]->fitness[j] = tempA[j];
             else
                 population[popIndex]->fitness[j] = tempB[j];
-            // double val = (tempA[j] + tempB[j]) / 2;
-            // population[popIndex]
-            //     ->fitness[j] = val;
         }
 
         population[popIndex]->fitnessIndex = fitnessComparison(population[popIndex]->fitness, bestFit); //update fitness
