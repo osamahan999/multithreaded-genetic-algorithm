@@ -1,5 +1,5 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 30
+#define NUM_OF_POPULATION 100
 #define NUM_OF_FITNESS_INDICES 1
 #define NUM_OF_GENS 100
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
@@ -37,7 +37,7 @@ void bestMutationChance(int runsToGetAvg);
 void populationWeightTopIndividuals();
 void pushArrayDownOneIndex(individual *topIndividual, int pushDownAmt);
 
-int MUTATION_CHANCE = 0; // mutation_chance% of mutation, if 20, then 80
+int MUTATION_CHANCE = 5; // mutation_chance% of mutation, if 20, then 80
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
@@ -48,7 +48,7 @@ individual *parents[NUM_OF_POPULATION * 2];
 int main()
 {
 
-    bestMutationChance(50); //gets the best mutation chance with current crossover function
+    bestMutationChance(25); //gets the best mutation chance with current crossover function
 
     //dealloc
     for (int i = 0; i < NUM_OF_POPULATION; i++)
@@ -63,7 +63,7 @@ void bestMutationChance(int runsToGetAvg)
     int bestMutationChance, initialMutationChance = MUTATION_CHANCE;
 
     FILE *fp;
-    fp = fopen("new.txt", "w");
+    fp = fopen("t2.txt", "w");
 
     if (fp == NULL)
         exit(1);
@@ -71,7 +71,7 @@ void bestMutationChance(int runsToGetAvg)
     double bestRuntime = INFINITY;
     for (int i = 0; i < 100 - initialMutationChance; i++)
     {
-        // printf("run #%d with mutation chance %d\n", i, MUTATION_CHANCE);
+        printf("run #%d with mutation chance %d\n", i, MUTATION_CHANCE);
         double totalTime = 0;
 
         for (int j = 0; j < runsToGetAvg; j++)
@@ -106,7 +106,7 @@ double algorithmInitialization()
     randomNumArr(bestFit); //generates what we will be regarding the best fit array
 
     initializePopulationThreading();
-    // printf("pregen individual#1 err= %f\n", getError(0));
+    printf("pregen individual#1 err= %f\n", getError(0));
 
     // printf("gen #%d %f\n", 0, getError());
 
@@ -141,7 +141,7 @@ double algorithmInitialization()
             }
         }
 
-        // printf("gen #%d pop %d lowest err: %f\n", genCounter, popWithLowestErr, lowestErr);
+        printf("gen #%d pop %d lowest err: %f\n", genCounter, popWithLowestErr, lowestErr);
     }
 
     gettimeofday(&end, NULL); //end timer
