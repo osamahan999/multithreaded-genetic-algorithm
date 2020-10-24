@@ -2,6 +2,11 @@ Compile using gcc -o animal animal.c -pthread
 
 Run using ./animal
 
+Some analysis on different mutation chances on #1 index yielded the following results!
+https://docs.google.com/spreadsheets/d/1hlP-HM_03wffkTxPztUvMRG_3e9E7I4430w9XD4gZ0o/edit?usp=sharing
+
+
+
 What this program does is the following:
 
 1. It initializes a best fit array which is our target. This is done with random numbers that are seeded using the current time, multiplied by some constants
