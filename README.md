@@ -2,7 +2,7 @@ Compile using gcc -o animal animal.c -pthread
 
 Run using ./animal
 
-Some analysis on different mutation chances on #1 index yielded the following results!
+Some analysis on different mutation chances on 1 index populations yielded the following results!
 https://docs.google.com/spreadsheets/d/1hlP-HM_03wffkTxPztUvMRG_3e9E7I4430w9XD4gZ0o/edit?usp=sharing
 
 
