@@ -1,3 +1,11 @@
+Note: I know that the use of multithreading here is not efficient. It was simply done to practice actually coding multithreading. 
+
+I may be refactoring it to use an X amount of threads, per a defined constant. Then I'll see what's the fastest thread count which I assume
+is 4 since I am giving the virtual box im running this on 4 cores. 
+
+I have a single-threaded genetic algorithm in my github that you can check out that runs much more quickly
+
+
 Compile using gcc -o animal animal.c -pthread
 
 Run using ./animal
