@@ -1,7 +1,7 @@
 Note: I know that the use of multithreading here is not efficient. It was simply done to practice actually coding multithreading. 
 
-I may be refactoring it to use an X amount of threads, per a defined constant. Then I'll see what's the fastest thread count which I assume
-is 4 since I am giving the virtual box im running this on 4 cores. 
+Refactored this algorithm such that you can set the amount of threads you'd like it to use and it runs that many. 
+NUM_OF_POP must be divisible by the THREAD_COUNT 
 
 I have a single-threaded genetic algorithm in my github that you can check out that runs much more quickly
 

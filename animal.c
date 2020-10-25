@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 100
+#define NUM_OF_POPULATION 2500
 #define NUM_OF_FITNESS_INDICES 1
-#define NUM_OF_GENS 100
+#define NUM_OF_GENS 1000
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 #define AMT_OF_ERROR_PER_INDICE 100            //with our # range going from 0 to 100,000, a 100 error per indice means 1/1000 error
 #define TOP_X 10
@@ -22,7 +22,7 @@ typedef struct
 } individual;
 
 void randomNumArr(double *arr);
-void *initializePopulation(void *person);
+void *initializePopulation(void *thread);
 void printArr(double arr[]);
 double fitnessComparison(double individual[], double goal[]);
 void *findParents(void *i);
@@ -31,13 +31,15 @@ void initializePopulationThreading();
 void haveChildren();
 double getError(int popNum);
 void calculatePopulationWeights();
-void *mutationGenerator(void *individual);
+void *mutationGenerator(void *thread);
 double algorithmInitialization();
 void bestMutationChance(int runsToGetAvg);
 void populationWeightTopIndividuals();
 void pushArrayDownOneIndex(individual *topIndividual, int pushDownAmt);
+void threadCountTime(int runsToGetAvg, int threadAmt);
 
-int MUTATION_CHANCE = 5; // mutation_chance% of mutation, if 20, then 80
+int MUTATION_CHANCE = 88; // mutation_chance% of mutation, if 20, then 80
+int THREAD_COUNT = 4;
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
@@ -48,11 +50,32 @@ individual *parents[NUM_OF_POPULATION * 2];
 int main()
 {
 
-    bestMutationChance(25); //gets the best mutation chance with current crossover function
+    // bestMutationChance(25); //gets the best mutation chance with current crossover function
 
-    //dealloc
+    // threadCountTime(50, 1);
+    // threadCountTime(50, 2);
+    // threadCountTime(50, 4);
+
+    algorithmInitialization();
+
+    //dealloc. uses the initial population's pointers since those pointers are gonna get doubled up on in the main arr
     for (int i = 0; i < NUM_OF_POPULATION; i++)
         free(initialPopulation[i]);
+}
+
+void threadCountTime(int runsToGetAvg, int threadAmt)
+{
+    THREAD_COUNT = threadAmt;
+    double totalTime = 0;
+    printf("threads: %d samplesize: %d \n", threadAmt, runsToGetAvg);
+
+    for (int j = 0; j < runsToGetAvg; j++)
+    {
+        totalTime += algorithmInitialization();
+    }
+
+    double avgTime = totalTime / runsToGetAvg;
+    printf("avg time %f with a net time of %f\n", avgTime, totalTime);
 }
 
 /**
@@ -63,7 +86,7 @@ void bestMutationChance(int runsToGetAvg)
     int bestMutationChance, initialMutationChance = MUTATION_CHANCE;
 
     FILE *fp;
-    fp = fopen("t2.txt", "w");
+    fp = fopen("t22.txt", "w");
 
     if (fp == NULL)
         exit(1);
@@ -146,7 +169,7 @@ double algorithmInitialization()
 
     gettimeofday(&end, NULL); //end timer
 
-    // printf("Time passed %f seconds \n", (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) * 1.0 / 1000000));
+    printf("Time passed %f seconds \n", (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) * 1.0 / 1000000));
 
     return (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) * 1.0 / 1000000);
 }
@@ -185,6 +208,7 @@ void haveChildren()
         //copy data into temp var
         for (int copyIndex = 0; copyIndex < NUM_OF_FITNESS_INDICES; copyIndex++)
         {
+
             tempA[copyIndex] = parents[i]->fitness[copyIndex];
             tempB[copyIndex] = parents[i + 1]->fitness[copyIndex];
         }
@@ -211,24 +235,48 @@ void haveChildren()
 //calls the threading function for the initial population
 void initializePopulationThreading()
 {
-    pthread_t threadNums[NUM_OF_POPULATION];
+    pthread_t threadNums[THREAD_COUNT];
 
     for (int i = 0; i < NUM_OF_POPULATION; i++)
     {
         //allocate mem for each population, store original points in initialPopulation array to free them at end of run
         initialPopulation[i] = (individual *)malloc(sizeof(individual));
         population[i] = initialPopulation[i];
+    }
 
-        pthread_create(&threadNums[i], NULL, initializePopulation, (void *)population[i]);
+    //call each thread with the thread num
+    for (int i = 0; i < THREAD_COUNT; i++)
+    {
+        int currentThread = i;
+
+        pthread_create(&threadNums[i], NULL, initializePopulation, (void *)&currentThread);
     }
 
     //joins all the threads
-    for (int i = 0; i < NUM_OF_POPULATION; i++)
+    for (int i = 0; i < THREAD_COUNT; i++)
     {
         pthread_join(threadNums[i], NULL);
     }
 }
 
+/*
+Calls all functions for each thread
+*/
+void *initializePopulation(void *thread)
+{
+    // //initialize the indiivdual
+    int threadNum = *((int *)(thread));                              //for 4 threads, this would be 0-3
+    int workPerThread = (int)ceil(NUM_OF_POPULATION / THREAD_COUNT); //100 pop, 4 threads, = 25
+
+    for (int j = workPerThread * threadNum; j < (workPerThread * (threadNum + 1)); j++)
+    {
+
+        randomNumArr(population[j]->fitness);
+        population[j]->fitnessIndex = fitnessComparison(population[j]->fitness, bestFit);
+    }
+
+    pthread_exit(0);
+}
 //calculates a weight for each population, which is used to do weighted random reproduction
 //for equal distribution among all individuals based on fitness
 void calculatePopulationWeights()
@@ -243,31 +291,38 @@ void calculatePopulationWeights()
 }
 
 //generates mutations for each array index for each parent called using threading
-void *mutationGenerator(void *currentPerson) //A little weird naming haha
+void *mutationGenerator(void *thread) //A little weird naming haha
 {
-    individual *person = (individual *)currentPerson;
     struct timeval time;
     int t;
     int mutationChance;
 
-    for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
+    int threadNum = *((int *)(thread)); //for 4 threads, this would be 0-3
+    free(thread);
+    int workPerThread = (int)ceil(NUM_OF_POPULATION / THREAD_COUNT); //100 pop, 4 threads, = 25
+
+    for (int j = workPerThread * threadNum; j < (workPerThread * (threadNum + 1)); j++)
     {
-        gettimeofday(&time, NULL);
-        t = time.tv_usec;
 
-        mutationChance = rand_r(&t) % 100;
-        if (mutationChance >= (100 - MUTATION_CHANCE)) //20% chance = 100 - 20
+        for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
         {
-
-            //50% chance to double, or 50% to half
             gettimeofday(&time, NULL);
             t = time.tv_usec;
-            int binaryMutator = (rand_r(&t) % 2);
 
-            if (binaryMutator == 0)
-                person->fitness[i] *= 1.1; //increase it
-            else
-                person->fitness[i] *= .9; //decrease it
+            mutationChance = rand_r(&t) % 100;
+            if (mutationChance >= (100 - MUTATION_CHANCE)) //20% chance = 100 - 20
+            {
+
+                //50% chance to double, or 50% to half
+                gettimeofday(&time, NULL);
+                t = time.tv_usec;
+                int binaryMutator = (rand_r(&t) % 2);
+
+                if (binaryMutator == 0)
+                    population[j]->fitness[i] *= 1.1; //increase it
+                else
+                    population[j]->fitness[i] *= .9; //decrease it
+            }
         }
     }
 
@@ -277,34 +332,36 @@ void *mutationGenerator(void *currentPerson) //A little weird naming haha
 //creates the threads to find the new parents based on current population
 void parentThreadingFunc()
 {
-    pthread_t threadNums[NUM_OF_PARENTS];
+    pthread_t threadNums[THREAD_COUNT];
     calculatePopulationWeights();
 
     //threads to find
 
-    for (int parent = 0; parent < NUM_OF_PARENTS; parent++)
+    //call each thread with the thread num
+    for (int i = 0; i < THREAD_COUNT; i++)
     {
         int *j = (int *)malloc(sizeof(int)); //mallocs int such that value does change due to synchronization issues
-
-        *j = parent;                                                       //sets value of malloc'd int to the parent index
-        pthread_create(&threadNums[parent], NULL, findParents, (void *)j); //each parent found using x threads
+        *j = i;
+        pthread_create(&threadNums[i], NULL, findParents, (void *)j);
     }
 
     //joins all the threads
-    for (int i = 0; i < NUM_OF_PARENTS; i++)
+    for (int i = 0; i < THREAD_COUNT; i++)
     {
         pthread_join(threadNums[i], NULL);
     }
 
     //mutate the parents with threading
-    for (int parent = 0; parent < NUM_OF_PARENTS; parent++)
+    for (int i = 0; i < THREAD_COUNT; i++)
     {
+        int *j = (int *)malloc(sizeof(int)); //mallocs int such that value does change due to synchronization issues
+        *j = i;
 
-        pthread_create(&threadNums[parent], NULL, mutationGenerator, (void *)parents[parent]); //each parent found using x threads
+        pthread_create(&threadNums[i], NULL, mutationGenerator, (void *)j); //each parent found using x threads
     }
 
     //joins all the threads
-    for (int i = 0; i < NUM_OF_PARENTS; i++)
+    for (int i = 0; i < THREAD_COUNT; i++)
     {
         pthread_join(threadNums[i], NULL);
     }
@@ -315,48 +372,47 @@ Finds the new parents for the next children and puts them in the parents array
 Uses weighted randomness, where each individual is given a weight due to their relative fitness, and then uses a random number to choose
 one of the weighted parents and puts it in the array
 */
-void *findParents(void *pointerToParentIndex)
+void *findParents(void *currentThread)
 {
 
     struct timeval time;
     double num;
-    int parentIndex = *(int *)pointerToParentIndex;
-    free(pointerToParentIndex);
+    double newParent; //random num for finding new parent based on weighing function
 
-    num = 0; //sum of weights to find which parent to use
+    int t; //for time
+    int threadNum = *(int *)currentThread;
 
-    gettimeofday(&time, NULL);
-    int t = time.tv_usec;
+    free(currentThread);
 
-    double newParent = ((double)(rand_r(&t) % 100000)) / 100000; //0 to 999999 because our random doubles go to 0 to 100,000
+    int workPerThread = (int)ceil(NUM_OF_PARENTS / THREAD_COUNT); //100 pop, 4 threads, = 25
 
-    for (int j = 0; j < NUM_OF_POPULATION; j++)
+    for (int i = workPerThread * threadNum; i < (workPerThread * (threadNum + 1)); i++)
     {
-        num += population[j]->weight;
 
-        if (newParent < num)
-        {
-            parents[parentIndex] = population[j];
-
+        if (i > NUM_OF_PARENTS) //shit solution to fix workPerThread not being a clean number
             break;
+
+        num = 0; //sum of weights to find which parent to use
+
+        gettimeofday(&time, NULL);
+        t = time.tv_usec;
+
+        newParent = ((double)(rand_r(&t) % 100000)) / 100000; //0 to 999999 because our random doubles go to 0 to 100,000
+
+        for (int j = 0; j < NUM_OF_POPULATION; j++)
+        {
+            num += population[j]->weight;
+
+            if (newParent < num)
+            {
+                parents[i] = population[j];
+
+                break;
+            }
         }
     }
 
     pthread_exit(0); //close thread ; job done
-}
-
-/*
-Calls all functions for each thread
-*/
-void *initializePopulation(void *person)
-{
-
-    // //initialize the indiivdual
-    individual *temp = (individual *)person; //MAKE SURE TO FREE THIS
-    randomNumArr(temp->fitness);
-    temp->fitnessIndex = fitnessComparison(temp->fitness, bestFit);
-
-    pthread_exit(0);
 }
 
 // a return value of 0 means you hit the goal! higher than 0 means farther
@@ -393,176 +449,4 @@ void printArr(double arr[])
 
     for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
         printf("%f\n", arr[i]);
-}
-
-/**ALL CODE BENEATH HERE DOES NOT WORK AND IS COMPLETE GARBAGE
- * 
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * //////////////////////////////////////////////////////////
- * 
-*/
-void findParentsTopIndividuals(individual *topIndividuals[])
-{
-    double totalSum = 0;
-
-    for (int i = 0; i < TOP_X; i++)
-        totalSum += topIndividuals[i]->fitnessIndex;
-
-    for (int i = 0; i < TOP_X; i++)
-        topIndividuals[i]->weight = topIndividuals[i]->fitnessIndex / totalSum;
-}
-
-void populationWeightTopIndividuals()
-{
-    //top x individuals
-    individual *topIndividuals[TOP_X]; //temporary array to hold all the top 10 individuals
-
-    //initialize arr to NULL values
-    for (int i = 0; i < TOP_X; i++)
-    {
-        topIndividuals[i] = NULL;
-    }
-
-    //for each individual, we get the fitnessIndex. We then go through each individual in our topIndividuals array
-    //and check to see if our current individual has a larger fitnessIndex than any one in the array. If so,
-    //we push down the array till that index, and put the new person in there.
-    for (int i = 0; i < NUM_OF_POPULATION; i++)
-    {
-        double fitnessIndex = population[i]->fitnessIndex;
-        for (int j = 0; j < TOP_X; j++)
-        {
-            if (topIndividuals[j] == NULL)
-            {
-                topIndividuals[j] = population[i];
-            }
-            else if (topIndividuals[j]->fitnessIndex > fitnessIndex)
-            {
-                for (int i = TOP_X - 1; i >= (TOP_X - j); j--)
-                {
-                    topIndividuals[i] = topIndividuals[i - 1];
-                }
-                topIndividuals[j] = population[i];
-                break;
-            }
-        }
-    }
-
-    double totalSum = 0;
-
-    for (int i = 0; i < TOP_X; i++)
-        totalSum += topIndividuals[i]->fitnessIndex;
-
-    for (int i = 0; i < TOP_X; i++)
-        topIndividuals[i]->weight = topIndividuals[i]->fitnessIndex / totalSum;
-
-    struct timeval time;
-    double num;
-    int t;
-
-    for (int i = 0; i < NUM_OF_PARENTS; i++)
-    {
-
-        num = 0; //sum of weights to find which parent to use
-
-        gettimeofday(&time, NULL);
-        t = time.tv_usec;
-
-        double newParent = ((double)(rand_r(&t) % 100000)) / 100000; //0 to 999999 because our random doubles go to 0 to 100,000
-
-        for (int j = 0; j < TOP_X; j++)
-        {
-            num += topIndividuals[j]->weight;
-
-            if (newParent < num)
-            {
-                parents[i] = topIndividuals[j];
-
-                break;
-            }
-        }
-    }
-
-    for (int parent = 0; parent < NUM_OF_POPULATION; parent++)
-    {
-        int mutationChance;
-
-        for (int i = 0; i < NUM_OF_FITNESS_INDICES; i++)
-        {
-            gettimeofday(&time, NULL);
-            t = time.tv_usec;
-
-            mutationChance = rand_r(&t) % 100;
-            if (mutationChance >= (100 - MUTATION_CHANCE)) //20% chance = 100 - 20
-            {
-
-                //50% chance to double, or 50% to half
-                gettimeofday(&time, NULL);
-                t = time.tv_usec;
-                int binaryMutator = (rand_r(&t) % 2);
-
-                if (binaryMutator == 0)
-                    parents[parent]->fitness[i] *= 1.1; //increase it
-                else
-                    parents[parent]->fitness[i] *= .9; //decrease it
-            }
-        }
-    }
-
-    int popIndex = 0; //used to update population
-
-    int crossOverPoint;
-
-    double tempA[NUM_OF_FITNESS_INDICES];
-    double tempB[NUM_OF_FITNESS_INDICES];
-
-    for (int i = 0; i < NUM_OF_PARENTS; i += 2)
-    {
-
-        //copy data into temp var
-        for (int copyIndex = 0; copyIndex < NUM_OF_FITNESS_INDICES; copyIndex++)
-        {
-            tempA[copyIndex] = parents[i]->fitness[copyIndex];
-            tempB[copyIndex] = parents[i + 1]->fitness[copyIndex];
-        }
-
-        //for each indice, gets the average of the two parent's index and sets it to the index in population
-        for (int j = 0; j < NUM_OF_FITNESS_INDICES; j++)
-        {
-            gettimeofday(&time, NULL);
-            t = time.tv_usec; //random math to maybe make it more chaotic?
-            crossOverPoint = (rand_r(&t) % 100);
-
-            if (crossOverPoint < 50)
-                population[popIndex]->fitness[j] = tempA[j];
-            else
-                population[popIndex]->fitness[j] = tempB[j];
-        }
-
-        population[popIndex]->fitnessIndex = fitnessComparison(population[popIndex]->fitness, bestFit); //update fitness
-
-        popIndex++;
-    }
-}
-
-//pushes array down one index
-void pushArrayDownOneIndex(individual *topIndividuals, int pushDownAmt)
-{
-
-    for (int i = TOP_X - 1; i >= (TOP_X - pushDownAmt); i--)
-    {
-        topIndividuals[i] = topIndividuals[i - 1];
-    }
 }
