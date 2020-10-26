@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 2500
+#define NUM_OF_POPULATION 10000
 #define NUM_OF_FITNESS_INDICES 1
-#define NUM_OF_GENS 1000
+#define NUM_OF_GENS 25
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 #define AMT_OF_ERROR_PER_INDICE 100            //with our # range going from 0 to 100,000, a 100 error per indice means 1/1000 error
 #define TOP_X 10
@@ -36,7 +36,8 @@ double algorithmInitialization();
 void bestMutationChance(int runsToGetAvg);
 void populationWeightTopIndividuals();
 void pushArrayDownOneIndex(individual *topIndividual, int pushDownAmt);
-void threadCountTime(int runsToGetAvg, int threadAmt);
+double threadCountTime(int runsToGetAvg, int threadAmt);
+void *produceKids(void *thread);
 
 int MUTATION_CHANCE = 88; // mutation_chance% of mutation, if 20, then 80
 int THREAD_COUNT = 4;
@@ -51,19 +52,31 @@ int main()
 {
 
     // bestMutationChance(25); //gets the best mutation chance with current crossover function
+    int bestThreadCount = 0;
+    double bestTime = INFINITY;
+    for (int i = 1; i < 101; i++)
+    {
+        if (NUM_OF_POPULATION % i == 0)
+        {
+            double t = threadCountTime(500, i);
+            if (t < bestTime)
+            {
+                bestTime = t;
+                bestThreadCount = i;
+            }
+        }
+    }
 
-    // threadCountTime(50, 1);
-    // threadCountTime(50, 2);
-    // threadCountTime(50, 4);
+    printf("best thread %d with time %f\n", bestThreadCount, bestTime);
 
-    algorithmInitialization();
+    // algorithmInitialization();
 
     //dealloc. uses the initial population's pointers since those pointers are gonna get doubled up on in the main arr
     for (int i = 0; i < NUM_OF_POPULATION; i++)
         free(initialPopulation[i]);
 }
 
-void threadCountTime(int runsToGetAvg, int threadAmt)
+double threadCountTime(int runsToGetAvg, int threadAmt)
 {
     THREAD_COUNT = threadAmt;
     double totalTime = 0;
@@ -76,6 +89,8 @@ void threadCountTime(int runsToGetAvg, int threadAmt)
 
     double avgTime = totalTime / runsToGetAvg;
     printf("avg time %f with a net time of %f\n", avgTime, totalTime);
+
+    return avgTime;
 }
 
 /**
@@ -194,7 +209,32 @@ double getError(int popNum)
 void haveChildren()
 {
 
-    int popIndex = 0; //used to update population
+    pthread_t threadNums[THREAD_COUNT];
+
+    //call each thread with the thread num
+    for (int i = 0; i < THREAD_COUNT; i++)
+    {
+        int *j = (int *)malloc(sizeof(int)); //mallocs int such that value does change due to synchronization issues
+        *j = i;
+        pthread_create(&threadNums[i], NULL, produceKids, (void *)j);
+    }
+
+    //joins all the threads
+    for (int i = 0; i < THREAD_COUNT; i++)
+    {
+        pthread_join(threadNums[i], NULL);
+    }
+}
+
+void *produceKids(void *thread)
+{
+    int threadNum = *(int *)thread;
+    free(thread);
+
+    int workPerThread = (int)ceil(NUM_OF_PARENTS / THREAD_COUNT); //100 pop, 4 threads, = 25
+
+    int popIndex = threadNum * workPerThread; //used to update population
+
     struct timeval time;
     int t;
     int crossOverPoint;
@@ -202,7 +242,7 @@ void haveChildren()
     double tempA[NUM_OF_FITNESS_INDICES];
     double tempB[NUM_OF_FITNESS_INDICES];
 
-    for (int i = 0; i < NUM_OF_PARENTS; i += 2)
+    for (int i = threadNum * workPerThread; i < (workPerThread * (threadNum + 1)); i += 2)
     {
 
         //copy data into temp var
@@ -211,25 +251,23 @@ void haveChildren()
 
             tempA[copyIndex] = parents[i]->fitness[copyIndex];
             tempB[copyIndex] = parents[i + 1]->fitness[copyIndex];
-        }
 
-        //for each indice, gets the average of the two parent's index and sets it to the index in population
-        for (int j = 0; j < NUM_OF_FITNESS_INDICES; j++)
-        {
             gettimeofday(&time, NULL);
             t = time.tv_usec; //random math to maybe make it more chaotic?
             crossOverPoint = (rand_r(&t) % 100);
 
             if (crossOverPoint < 50)
-                population[popIndex]->fitness[j] = tempA[j];
+                population[popIndex]->fitness[copyIndex] = tempA[copyIndex];
             else
-                population[popIndex]->fitness[j] = tempB[j];
+                population[popIndex]->fitness[copyIndex] = tempB[copyIndex];
         }
 
         population[popIndex]->fitnessIndex = fitnessComparison(population[popIndex]->fitness, bestFit); //update fitness
 
         popIndex++;
     }
+
+    pthread_exit(0);
 }
 
 //calls the threading function for the initial population
