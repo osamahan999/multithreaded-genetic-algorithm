@@ -1,0 +1,16 @@
+thread count: 1, runtime: 3.026027
+thread count: 2, runtime: 0.820665
+thread count: 4, runtime: 0.741835
+thread count: 5, runtime: 1.009951
+thread count: 8, runtime: 0.714914
+thread count: 10, runtime: 0.779048
+thread count: 20, runtime: 0.702856
+thread count: 25, runtime: 0.771133
+thread count: 40, runtime: 0.762470
+thread count: 50, runtime: 0.724854
+thread count: 100, runtime: 0.772837
+
+73% mutation
+5k population
+100 gens
+500 sample runs to get avg

@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#define NUM_OF_POPULATION 10000
-#define NUM_OF_FITNESS_INDICES 1
-#define NUM_OF_GENS 25
+#define NUM_OF_POPULATION 5000
+#define NUM_OF_FITNESS_INDICES 6
+#define NUM_OF_GENS 100
 #define NUM_OF_PARENTS (2 * NUM_OF_POPULATION) //amt of parents each child has
 #define AMT_OF_ERROR_PER_INDICE 100            //with our # range going from 0 to 100,000, a 100 error per indice means 1/1000 error
 #define TOP_X 10
@@ -39,8 +39,8 @@ void pushArrayDownOneIndex(individual *topIndividual, int pushDownAmt);
 double threadCountTime(int runsToGetAvg, int threadAmt);
 void *produceKids(void *thread);
 
-int MUTATION_CHANCE = 88; // mutation_chance% of mutation, if 20, then 80
-int THREAD_COUNT = 4;
+int MUTATION_CHANCE = 73; // mutation_chance% of mutation, if 20, then 80
+int THREAD_COUNT = 20;
 
 double bestFit[NUM_OF_FITNESS_INDICES];
 individual *population[NUM_OF_POPULATION];
@@ -52,22 +52,17 @@ int main()
 {
 
     // bestMutationChance(25); //gets the best mutation chance with current crossover function
-    int bestThreadCount = 0;
-    double bestTime = INFINITY;
-    for (int i = 1; i < 101; i++)
-    {
-        if (NUM_OF_POPULATION % i == 0)
-        {
-            double t = threadCountTime(500, i);
-            if (t < bestTime)
-            {
-                bestTime = t;
-                bestThreadCount = i;
-            }
-        }
-    }
 
-    printf("best thread %d with time %f\n", bestThreadCount, bestTime);
+    double totalTime = 0;
+    FILE *fp;
+    
+    fp = fopen("sixIndice.txt", "w");
+    fputs("20 threads, 73 mutation rate, 5k pop, 100 gens, sample size 400\n", fp);
+   
+    double AvgTime = threadCountTime(50, 20);
+    fprintf(fp, "Avg time for %d indices at 20 threads and 27 mutation: %f \n", NUM_OF_FITNESS_INDICES, AvgTime);
+
+    fclose(fp);
 
     // algorithmInitialization();
 
@@ -80,7 +75,7 @@ double threadCountTime(int runsToGetAvg, int threadAmt)
 {
     THREAD_COUNT = threadAmt;
     double totalTime = 0;
-    printf("threads: %d samplesize: %d \n", threadAmt, runsToGetAvg);
+    // printf("threads: %d samplesize: %d \n", threadAmt, runsToGetAvg);
 
     for (int j = 0; j < runsToGetAvg; j++)
     {
@@ -88,7 +83,7 @@ double threadCountTime(int runsToGetAvg, int threadAmt)
     }
 
     double avgTime = totalTime / runsToGetAvg;
-    printf("avg time %f with a net time of %f\n", avgTime, totalTime);
+    // printf("avg time %f with a net time of %f\n", avgTime, totalTime);
 
     return avgTime;
 }
@@ -144,9 +139,7 @@ double algorithmInitialization()
     randomNumArr(bestFit); //generates what we will be regarding the best fit array
 
     initializePopulationThreading();
-    printf("pregen individual#1 err= %f\n", getError(0));
-
-    // printf("gen #%d %f\n", 0, getError());
+    // printf("pregen individual#1 err= %f\n", getError(0));
 
     for (int i = 0; i < NUM_OF_GENS; i++)
     {
@@ -173,18 +166,17 @@ double algorithmInitialization()
 
             if (err < (AMT_OF_ERROR_PER_INDICE * NUM_OF_FITNESS_INDICES))
             {
-                // printf("gen #%d had err %f and is converged!\n", i, err);
                 i = NUM_OF_GENS;
                 break;
             }
         }
 
-        printf("gen #%d pop %d lowest err: %f\n", genCounter, popWithLowestErr, lowestErr);
+        // printf("gen #%d pop %d lowest err: %f\n", genCounter, popWithLowestErr, lowestErr);
     }
 
     gettimeofday(&end, NULL); //end timer
 
-    printf("Time passed %f seconds \n", (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) * 1.0 / 1000000));
+    // printf("Time passed %f seconds \n", (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) * 1.0 / 1000000));
 
     return (end.tv_sec - start.tv_sec) + ((end.tv_usec - start.tv_usec) * 1.0 / 1000000);
 }

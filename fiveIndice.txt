@@ -1,0 +1,2 @@
+20 threads, 73 mutation rate, 5k pop, 100 gens, sample size 400
+Avg time for 5 indices at 20 threads and 27 mutation: 2.015607 

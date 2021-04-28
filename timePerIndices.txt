@@ -1,0 +1,8 @@
+20 threads, 27% mutation rate, 5k pop, 100 gens, sample size 50 each indice count
+Avg time for 1 indices at 20 threads and 27 mutation: 0.761316 
+Avg time for 2 indices at 20 threads and 27 mutation: 0.653864 
+Avg time for 3 indices at 20 threads and 27 mutation: 0.805360 
+Avg time for 4 indices at 20 threads and 27 mutation: 0.635328 
+Avg time for 5 indices at 20 threads and 27 mutation: 0.654699 
+Avg time for 6 indices at 20 threads and 27 mutation: 0.675734 
+Avg time for 7 indices at 20 threads and 27 mutation: 0.700488 
